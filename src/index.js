@@ -12,12 +12,14 @@ import {
 import Login from "./pages/Login";
 import Upload from "./pages/Upload";
 import { ChakraProvider, ColorModeScript } from "@chakra-ui/react";
+import Camera from "./pages/Test";
 
 const router = createBrowserRouter(
   createRoutesFromElements(
     <Route path="/" element={<App />}>
       <Route path="/login" element={<Login />} />
       <Route path="/upload" element={<Upload />} />
+      <Route path="/test" element={<Camera />} />
     </Route>,
   ),
 );

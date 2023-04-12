@@ -8,10 +8,8 @@ function App() {
   const navigate = useNavigate();
   useEffect(() => {
     const checkLogin = async () => {
-      console.log(".....................");
       let loggedIn = await authService.isLoggedIn(username);
       if (!loggedIn) {
-        console.log("trigger");
         navigate("/login");
       }
     };
