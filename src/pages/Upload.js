@@ -27,12 +27,13 @@ import authService from "../services/auth.service";
 import Cropper from "../components/cropper/Cropper";
 
 function Upload() {
+  const FileMaxSize = 3 * 1024 ** 2;
   const [isLoading, setIsLoading] = useState(false);
   const [remarks, setRemarks] = useState("");
-  const [fileName, setFileName] = useState("Select a file...");
+  const [fileName, setFileName] = useState("");
   const [file, setFile] = useState(null);
   const [image, setImage] = useState(null);
-  const [croppedImage, setCropImage] = useState(null);
+  const [croppedImage, setCroppedImage] = useState(null);
   const fileInputRef = useRef(null);
   const toast = useToast();
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -65,7 +66,16 @@ function Upload() {
       });
       return;
     }
-    console.log(file);
+    if (file?.size > FileMaxSize) {
+      toast({
+        title: "Error",
+        description: "File size is larger than 3MB",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+      return;
+    }
     setFileName(file.name);
     setFile(file);
     const imageUrl = await loadImage(reader, file);
@@ -81,7 +91,7 @@ function Upload() {
   };
 
   const handleCropComplete = (croppedImage) => {
-    setCropImage(croppedImage);
+    setCroppedImage(croppedImage);
   };
 
   const handleSubmit = (event) => {
@@ -101,6 +111,7 @@ function Upload() {
   const handleSaveClick = () => {
     // Do any custom logic when the save button is clicked
     handleModalClose();
+    console.log(croppedImage);
     setImage(croppedImage);
   };
 
