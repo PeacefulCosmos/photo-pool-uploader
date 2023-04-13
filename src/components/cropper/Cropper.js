@@ -5,7 +5,6 @@ import "react-image-crop/dist/ReactCrop.css";
 import { canvasPreview } from "./canvasPreview";
 
 function Cropper({ imageSrc, onCropComplete }) {
-  console.log(imageSrc);
   const [crop, setCrop] = useState({
     unit: "%",
     x: 25,
@@ -19,7 +18,18 @@ function Cropper({ imageSrc, onCropComplete }) {
   const imageRef = useRef(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  const compressBlob = async (canvas) => {
+    canvas.toBlob((blob) => {});
+  };
+
   const handleCropChange = (newCrop) => setCrop(newCrop);
+
+  const handleImageLoad = async (img) => {
+    imageRef.current = img;
+    const canvas = canvasRef.current;
+    const croppedCanvas = await canvasPreview(imageRef.current, canvas, crop);
+    onCropComplete(croppedCanvas.toDataURL());
+  };
 
   const handleCropComplete = async (croppedAreaPixels) => {
     try {
@@ -36,7 +46,7 @@ function Cropper({ imageSrc, onCropComplete }) {
       <ReactCrop
         crop={crop}
         onChange={handleCropChange}
-        onImageLoaded={(img) => (imageRef.current = img)}
+        onImageLoaded={handleImageLoad}
         onComplete={handleCropComplete}
       >
         <ChakraImage src={imageSrc} ref={imageRef} />

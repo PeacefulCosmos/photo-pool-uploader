@@ -9,7 +9,7 @@ import {
   Text,
   Textarea,
   Button,
-  Image,
+  Image as ChakraImage,
   useToast,
   Icon,
   Grid,
@@ -35,9 +35,39 @@ function Upload() {
   const [image, setImage] = useState(null);
   const [croppedImage, setCroppedImage] = useState(null);
   const fileInputRef = useRef(null);
+  const imgInputRef = useRef(null);
   const toast = useToast();
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const createBase64ToFile = async () => {
+    console.log(file);
+    // Slice the image type from the base64 string
+    const imageType = croppedImage.substring(
+      "data:".length,
+      croppedImage.indexOf(";base64"),
+    );
+
+    // Decode the base64 string into a binary string using `atob`
+    const binaryString = atob(
+      croppedImage.slice(croppedImage.indexOf(",") + 1),
+    );
+
+    // Create a `Uint8Array` from the binary string
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+
+    // Create a `Blob` object from the `Uint8Array`
+    const blob = new Blob([bytes], { type: imageType });
+
+    // Create a `File` object from the `Blob`
+    const newFile = new File([blob], fileName, { type: imageType });
+    console.log(newFile);
+    return newFile;
+  };
+
   const handleChanges = (event) => {
     if (event.target.name === "remark") {
       setRemarks(event.target.value);
@@ -47,7 +77,16 @@ function Upload() {
   };
 
   const handleClick = () => {
+    fileInputRef.current.value = "";
     fileInputRef.current.click();
+
+    fileInputRef.current.addEventListener("change", handleFileSelect);
+  };
+
+  const handleFileSelect = () => {
+    // The file selection is complete
+    // Do something with the selected file
+    setIsLoading(false);
   };
 
   const handleFileChange = async (event) => {
@@ -79,6 +118,7 @@ function Upload() {
     setFileName(file.name);
     setFile(file);
     const imageUrl = await loadImage(reader, file);
+    setIsLoading(false);
     setImage(imageUrl);
   };
 
@@ -94,12 +134,6 @@ function Upload() {
     setCroppedImage(croppedImage);
   };
 
-  const handleSubmit = (event) => {
-    event.preventDefault();
-    console.log(`Remarks: ${remarks}`);
-    console.log(`File: ${file ? file.name : "none"}`);
-  };
-
   const handleModalOpen = () => {
     setIsModalOpen(true);
   };
@@ -111,8 +145,33 @@ function Upload() {
   const handleSaveClick = () => {
     // Do any custom logic when the save button is clicked
     handleModalClose();
-    console.log(croppedImage);
     setImage(croppedImage);
+  };
+
+  const handleSubmit = async (event) => {
+    setIsLoading(true);
+    event.preventDefault();
+    const newFile = await createBase64ToFile();
+    console.log({ newFile: newFile, fileName: fileName, remarks: remarks });
+    toast({
+      title: "Success!",
+      description: "Submission success",
+      status: "success",
+      duration: 5000,
+      isClosable: true,
+    });
+    restoreInput();
+    setIsLoading(false);
+  };
+
+  const restoreInput = () => {
+    setCroppedImage(null);
+    setFile(null);
+    setFileName("");
+    setImage(null);
+    setIsLoading(false);
+    setIsModalOpen(false);
+    setRemarks("");
   };
 
   return (
@@ -134,7 +193,6 @@ function Upload() {
               </FormLabel>
               <Grid templateColumns={"repeat(2, 1fr)"} gap={20}>
                 <Button
-                  type="text"
                   isLoading={isLoading}
                   leftIcon={<Icon as={FiUpload} />}
                   onClick={handleClick}
@@ -144,12 +202,10 @@ function Upload() {
                   Upload
                 </Button>
                 <Button
-                  type="text"
                   isLoading={isLoading}
                   hidden={!file}
                   leftIcon={<Icon as={FiCrop} />}
                   onClick={handleModalOpen}
-                  readOnly
                   style={{ cursor: "pointer" }}
                 >
                   Crop
@@ -160,7 +216,7 @@ function Upload() {
                   onClose={handleModalClose}
                 >
                   <ModalOverlay />
-                  <ModalContent height={"100%"} width={"100%"} m={0}>
+                  <ModalContent height={"90%"} width={"95%"} mt={5}>
                     <ModalHeader fontSize={"2xl"}>Cropping</ModalHeader>
                     <ModalCloseButton />
                     <ModalBody pb={6}>
@@ -178,7 +234,7 @@ function Upload() {
                       >
                         Save
                       </Button>
-                      <Button onClick={onClose}>Cancel</Button>
+                      <Button onClick={handleModalClose}>Cancel</Button>
                     </ModalFooter>
                   </ModalContent>
                 </Modal>
@@ -194,13 +250,15 @@ function Upload() {
                 style={{ display: "none" }}
               />
 
-              <Image src={image} mt={3} maxHeight={"35vh"} />
+              <ChakraImage src={image} mt={3} maxHeight={"35vh"} />
             </FormControl>
             <FormControl w="100%" mt={4}>
               <FormLabel>File Name</FormLabel>
               <Input
                 isDisabled={isLoading}
                 name="file-name"
+                _placeholder={{ color: "gray.400" }}
+                color={"blackAlpha.700"}
                 placeholder="Enter filename"
                 value={fileName}
                 onChange={handleChanges}
@@ -211,6 +269,8 @@ function Upload() {
               <Textarea
                 isDisabled={isLoading}
                 placeholder="Enter remarks"
+                _placeholder={{ color: "gray.400" }}
+                color={"blackAlpha.700"}
                 name="remark"
                 value={remarks}
                 onChange={handleChanges}

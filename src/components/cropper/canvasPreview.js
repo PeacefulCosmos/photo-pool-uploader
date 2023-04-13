@@ -21,11 +21,12 @@ export async function canvasPreview(
   canvas.height = Math.floor(crop.height * scaleY * pixelRatio);
 
   ctx.scale(pixelRatio, pixelRatio);
-  ctx.imageSmoothingQuality = "low";
+  ctx.imageSmoothingQuality = "high";
 
   const cropX = crop.x * scaleX;
   const cropY = crop.y * scaleY;
-
+  // const cropX = crop.x;
+  // const cropY = crop.y;
   const rotateRads = rotate * TO_RADIANS;
   const centerX = image.naturalWidth / 2;
   const centerY = image.naturalHeight / 2;
