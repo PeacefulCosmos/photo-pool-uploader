@@ -1,10 +1,17 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useContext, useEffect } from "react";
 import ReactCrop from "react-image-crop";
 import { Button, Image as ChakraImage } from "@chakra-ui/react";
 import "react-image-crop/dist/ReactCrop.css";
 import { canvasPreview } from "./canvasPreview";
+import CropperStateContext from "../../context/CopperStateContext";
 
-function Cropper({ imageSrc, onCropComplete }) {
+function Cropper({ imageSrc }) {
+  useEffect(() => {
+    console.log(crop);
+    handleCropComplete(crop);
+  }, []);
+
+  const { cropCanvas, setCropCanvas } = useContext(CropperStateContext);
   const [crop, setCrop] = useState({
     unit: "%",
     x: 25,
@@ -18,24 +25,19 @@ function Cropper({ imageSrc, onCropComplete }) {
   const imageRef = useRef(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const compressBlob = async (canvas) => {
-    canvas.toBlob((blob) => {});
-  };
-
   const handleCropChange = (newCrop) => setCrop(newCrop);
 
   const handleImageLoad = async (img) => {
     imageRef.current = img;
-    const canvas = canvasRef.current;
-    const croppedCanvas = await canvasPreview(imageRef.current, canvas, crop);
-    onCropComplete(croppedCanvas.toDataURL());
   };
 
   const handleCropComplete = async (croppedAreaPixels) => {
     try {
+      console.log(croppedAreaPixels);
+      setCrop(croppedAreaPixels);
       const canvas = canvasRef.current;
       const croppedCanvas = await canvasPreview(imageRef.current, canvas, crop);
-      onCropComplete(croppedCanvas.toDataURL());
+      setCropCanvas(croppedCanvas);
     } catch (error) {
       console.error(error);
     }

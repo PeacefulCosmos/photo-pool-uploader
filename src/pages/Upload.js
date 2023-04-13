@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, createContext } from "react";
 import {
   Box,
   Center,
@@ -23,11 +23,12 @@ import {
   ModalFooter,
 } from "@chakra-ui/react";
 import { FiCrop, FiUpload } from "react-icons/fi";
-import authService from "../services/auth.service";
 import Cropper from "../components/cropper/Cropper";
+import CropperStateContext from "../context/CopperStateContext";
 
 function Upload() {
   const FileMaxSize = 3 * 1024 ** 2;
+  const [cropCanvas, setCropCanvas] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [remarks, setRemarks] = useState("");
   const [fileName, setFileName] = useState("");
@@ -35,13 +36,10 @@ function Upload() {
   const [image, setImage] = useState(null);
   const [croppedImage, setCroppedImage] = useState(null);
   const fileInputRef = useRef(null);
-  const imgInputRef = useRef(null);
   const toast = useToast();
-  const { isOpen, onOpen, onClose } = useDisclosure();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const createBase64ToFile = async () => {
-    console.log(file);
+  const convertBase64ToFile = async () => {
     // Slice the image type from the base64 string
     const imageType = croppedImage.substring(
       "data:".length,
@@ -64,7 +62,6 @@ function Upload() {
 
     // Create a `File` object from the `Blob`
     const newFile = new File([blob], fileName, { type: imageType });
-    console.log(newFile);
     return newFile;
   };
 
@@ -79,13 +76,14 @@ function Upload() {
   const handleClick = () => {
     fileInputRef.current.value = "";
     fileInputRef.current.click();
-
     fileInputRef.current.addEventListener("change", handleFileSelect);
   };
 
   const handleFileSelect = () => {
     // The file selection is complete
     // Do something with the selected file
+    setCropCanvas("");
+    setCroppedImage("");
     setIsLoading(false);
   };
 
@@ -130,10 +128,6 @@ function Upload() {
     });
   };
 
-  const handleCropComplete = (croppedImage) => {
-    setCroppedImage(croppedImage);
-  };
-
   const handleModalOpen = () => {
     setIsModalOpen(true);
   };
@@ -142,16 +136,25 @@ function Upload() {
     setIsModalOpen(false);
   };
 
-  const handleSaveClick = () => {
-    // Do any custom logic when the save button is clicked
+  const handleSaveClick = async () => {
+    setIsLoading(true);
+    const croppedImage = await cropCanvas.toDataURL("image/jpeg", 0.2);
+    setCroppedImage(croppedImage);
+    setIsLoading(false);
     handleModalClose();
     setImage(croppedImage);
   };
 
   const handleSubmit = async (event) => {
     setIsLoading(true);
+    let newFile;
     event.preventDefault();
-    const newFile = await createBase64ToFile();
+    if (croppedImage) {
+      newFile = await convertBase64ToFile();
+    } else {
+      newFile = file;
+    }
+
     console.log({ newFile: newFile, fileName: fileName, remarks: remarks });
     toast({
       title: "Success!",
@@ -172,123 +175,123 @@ function Upload() {
     setIsLoading(false);
     setIsModalOpen(false);
     setRemarks("");
+    setCropCanvas(null);
   };
 
   return (
-    <Center h="100vh">
-      <Box
-        w="md"
-        m={"5"}
-        p={6}
-        borderWidth={1}
-        borderRadius={8}
-        boxShadow="md"
-        bg={"white"}
-      >
-        <form onSubmit={handleSubmit}>
-          <Flex direction="column" align="center" justify="center">
-            <FormControl w="100%">
-              <FormLabel fontSize={"larger"} mb={"20px"}>
-                Upload Photo or Take Picture
-              </FormLabel>
-              <Grid templateColumns={"repeat(2, 1fr)"} gap={20}>
-                <Button
-                  isLoading={isLoading}
-                  leftIcon={<Icon as={FiUpload} />}
-                  onClick={handleClick}
-                  readOnly
-                  style={{ cursor: "pointer" }}
-                >
-                  Upload
-                </Button>
-                <Button
-                  isLoading={isLoading}
-                  hidden={!file}
-                  leftIcon={<Icon as={FiCrop} />}
-                  onClick={handleModalOpen}
-                  style={{ cursor: "pointer" }}
-                >
-                  Crop
-                </Button>
-                <Modal
-                  closeOnOverlayClick={false}
-                  isOpen={isModalOpen}
-                  onClose={handleModalClose}
-                >
-                  <ModalOverlay />
-                  <ModalContent height={"90%"} width={"95%"} mt={5}>
-                    <ModalHeader fontSize={"2xl"}>Cropping</ModalHeader>
-                    <ModalCloseButton />
-                    <ModalBody pb={6}>
-                      <Cropper
-                        imageSrc={image}
-                        onCropComplete={handleCropComplete}
-                      />
-                    </ModalBody>
+    <CropperStateContext.Provider value={{ cropCanvas, setCropCanvas }}>
+      <Center h="100vh">
+        <Box
+          w="md"
+          m={"5"}
+          p={6}
+          borderWidth={1}
+          borderRadius={8}
+          boxShadow="md"
+          bg={"white"}
+        >
+          <form onSubmit={handleSubmit}>
+            <Flex direction="column" align="center" justify="center">
+              <FormControl w="100%">
+                <FormLabel fontSize={"larger"} mb={"20px"}>
+                  Upload Photo or Take Picture
+                </FormLabel>
+                <Grid templateColumns={"repeat(2, 1fr)"} gap={20}>
+                  <Button
+                    isLoading={isLoading}
+                    leftIcon={<Icon as={FiUpload} />}
+                    onClick={handleClick}
+                    style={{ cursor: "pointer" }}
+                  >
+                    Upload
+                  </Button>
+                  <Button
+                    isLoading={isLoading}
+                    hidden={!file}
+                    leftIcon={<Icon as={FiCrop} />}
+                    onClick={handleModalOpen}
+                    style={{ cursor: "pointer" }}
+                  >
+                    Crop
+                  </Button>
+                  <Modal
+                    closeOnOverlayClick={false}
+                    isOpen={isModalOpen}
+                    onClose={handleModalClose}
+                  >
+                    <ModalOverlay />
+                    <ModalContent height={"90%"} width={"95%"} mt={5}>
+                      <ModalHeader fontSize={"2xl"}>Cropping</ModalHeader>
+                      <ModalCloseButton />
+                      <ModalBody pb={6}>
+                        <Cropper imageSrc={image} />
+                      </ModalBody>
 
-                    <ModalFooter>
-                      <Button
-                        colorScheme="blue"
-                        mr={3}
-                        onClick={handleSaveClick}
-                      >
-                        Save
-                      </Button>
-                      <Button onClick={handleModalClose}>Cancel</Button>
-                    </ModalFooter>
-                  </ModalContent>
-                </Modal>
-              </Grid>
+                      <ModalFooter>
+                        <Button
+                          isLoading={isLoading}
+                          colorScheme="blue"
+                          mr={3}
+                          onClick={handleSaveClick}
+                        >
+                          Save
+                        </Button>
+                        <Button onClick={handleModalClose}>Cancel</Button>
+                      </ModalFooter>
+                    </ModalContent>
+                  </Modal>
+                </Grid>
 
-              <Input
-                type="file"
-                name="identity-image"
-                id="image"
-                accept=".png,.jpg,.jpeg"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                style={{ display: "none" }}
-              />
+                <Input
+                  type="file"
+                  name="identity-image"
+                  id="image"
+                  accept=".png,.jpg,.jpeg"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  style={{ display: "none" }}
+                />
 
-              <ChakraImage src={image} mt={3} maxHeight={"35vh"} />
-            </FormControl>
-            <FormControl w="100%" mt={4}>
-              <FormLabel>File Name</FormLabel>
-              <Input
-                isDisabled={isLoading}
-                name="file-name"
-                _placeholder={{ color: "gray.400" }}
-                color={"blackAlpha.700"}
-                placeholder="Enter filename"
-                value={fileName}
-                onChange={handleChanges}
-              />
-            </FormControl>
-            <FormControl w="100%" mt={4}>
-              <FormLabel>Remarks</FormLabel>
-              <Textarea
-                isDisabled={isLoading}
-                placeholder="Enter remarks"
-                _placeholder={{ color: "gray.400" }}
-                color={"blackAlpha.700"}
-                name="remark"
-                value={remarks}
-                onChange={handleChanges}
-              />
-            </FormControl>
-            <Button
-              type="submit"
-              colorScheme="blue"
-              mt={6}
-              minW={"150px"}
-              isLoading={isLoading}
-            >
-              Submit
-            </Button>
-          </Flex>
-        </form>
-      </Box>
-    </Center>
+                <ChakraImage src={image} mt={3} maxHeight={"35vh"} />
+              </FormControl>
+              <FormControl w="100%" mt={4}>
+                <FormLabel>File Name</FormLabel>
+                <Input
+                  isDisabled={isLoading}
+                  name="file-name"
+                  _placeholder={{ color: "gray.400" }}
+                  color={"blackAlpha.700"}
+                  placeholder="Enter filename"
+                  value={fileName}
+                  onChange={handleChanges}
+                />
+              </FormControl>
+              <FormControl w="100%" mt={4}>
+                <FormLabel>Remarks</FormLabel>
+                <Textarea
+                  isDisabled={isLoading}
+                  placeholder="Enter remarks"
+                  _placeholder={{ color: "gray.400" }}
+                  color={"blackAlpha.700"}
+                  name="remark"
+                  value={remarks}
+                  onChange={handleChanges}
+                />
+              </FormControl>
+              <Button
+                type="submit"
+                colorScheme="blue"
+                mt={6}
+                minW={"150px"}
+                isLoading={isLoading}
+              >
+                Submit
+              </Button>
+            </Flex>
+          </form>
+        </Box>
+      </Center>
+    </CropperStateContext.Provider>
   );
 }
 
