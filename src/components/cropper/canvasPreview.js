@@ -9,6 +9,10 @@ export async function canvasPreview(
 ) {
   const ctx = canvas.getContext("2d");
 
+  if (!crop) {
+    return;
+  }
+
   if (!ctx) {
     throw new Error("No 2d context");
   }
